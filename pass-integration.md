@@ -120,26 +120,7 @@ mkdir -p ~/.openclaw/skills/pass
 - **Permitted Uses**: Direct injection into commands, subprocess env vars
 - **Prohibited Uses**: No echo, no logging, no caching
 
-### Step 6: Configure SSH for Non-Interactive Use
-
-To use SSH keys without manual passphrase entry, set up an askpass helper:
-
-```bash
-# Create a helper script that retrieves passphrase from Pass
-cat > /tmp/ssh_askpass.sh << 'EOF'
-#!/bin/bash
-pass show openclaw/sshkeys/ed25519
-EOF
-chmod 700 /tmp/ssh_askpass.sh
-```
-
-Add SSH key to agent:
-```bash
-eval "$(ssh-agent -s)"
-DISPLAY="" SSH_ASKPASS="/tmp/ssh_askpass.sh" SSH_ASKPASS_REQUIRE=force ssh-add ~/.ssh/id_ed25519
-```
-
-### Step 7: Configure GitHub CLI with Pass
+### Step 6: Configure GitHub CLI with Pass
 
 Install and configure `gh` to use your stored PAT:
 
@@ -155,7 +136,7 @@ export GH_TOKEN=$(pass show openclaw/web/github_pat)
 gh auth status
 ```
 
-### Step 8: Create Git Repository for Skills
+### Step 7: Create Git Repository for Skills
 
 With Pass and GitHub CLI working, create a repo to share your skills:
 
@@ -179,7 +160,9 @@ git commit -m "Initial commit"
 git push -u origin main
 ```
 
-### Step 9: Maintain Security Discipline
+### Step 8: Maintain Security Discipline
+
+**Golden Rule: Retrieve from Pass when needed. Laziness and security are mutually exclusive.**
 
 Always follow these rules:
 
@@ -234,14 +217,19 @@ ls ~/.openclaw/skills/pass/SKILL.md
 
 ## Troubleshooting
 
-### SSH Key Not Added Automatically
-Ensure `ssh-agent` is running and the askpass helper is set correctly:
+### SSH Key Passphrase
+When using SSH keys with passphrases, retrieve the passphrase from Pass when needed:
+
 ```bash
-eval "$(ssh-agent -s)"
-export SSH_ASKPASS="/tmp/ssh_askpass.sh"
-export SSH_ASKPASS_REQUIRE=force
+# Manually add key to agent (you'll be prompted for passphrase)
 ssh-add ~/.ssh/id_ed25519
+
+# Or use the passphrase from Pass directly in commands
+# Example: git push with SSH key
+GIT_SSH_COMMAND="ssh" git push origin main
 ```
+
+**Security Note:** Never create helper scripts that automatically provide passphrases. Always retrieve from Pass explicitly when needed.
 
 ### Pass Not Found
 Make sure `pass` is in your PATH:
