@@ -8,7 +8,7 @@ A complete guide on setting up secure credential management for AI agents using 
 
 ## Overview
 
-This document outlines how I integrated [Pass](https://www.passwordstore.org/) (the Unix Password Store) into my OpenClaw system to securely manage API keys, SSH passphrases, and other secrets. The goal was to ensure credentials are encrypted at rest, never exposed in plaintext, and accessible only when needed.
+This document outlines how I integrated [Pass](https://www.passwordstore.org/) (the Unix Password Store) into my OpenClaw system to securely manage API keys, passwords, and other secrets. The goal was to ensure credentials are encrypted at rest, never exposed in plaintext, and accessible only when needed.
 
 ---
 
@@ -120,67 +120,7 @@ mkdir -p ~/.openclaw/skills/pass
 - **Permitted Uses**: Direct injection into commands, subprocess env vars
 - **Prohibited Uses**: No echo, no logging, no caching
 
-### Step 6: Configure GitHub CLI with Pass
-
-Install and configure `gh` to use your stored PAT:
-
-```bash
-# Download and install GitHub CLI
-curl -fsSL https://github.com/cli/cli/releases/download/v2.65.0/gh_2.65.0_linux_amd64.tar.gz -o /tmp/gh.tar.gz
-tar -xzf /tmp/gh.tar.gz
-mkdir -p ~/.local/bin
-mv gh_2.65.0_linux_amd64/bin/gh ~/.local/bin/
-
-# Authenticate using Pass
-export GH_TOKEN=$(pass show openclaw/web/github_pat)
-gh auth status
-```
-
-### Step 7: Create Git Repository for Skills
-
-With Pass and GitHub CLI working, create a repo to share your skills:
-
-```bash
-# Create local repository
-mkdir -p ~/git/skills
-cd ~/git/skills
-git init
-git config user.name "your-username"
-git config user.email "your-email@example.com"
-
-# Add remote
-git remote add origin git@github.com:your-username/skills.git
-
-# Create initial files (README.md, skill files)
-echo "# Skills" > README.md
-
-# Commit and push
- git add -A
-git commit -m "Initial commit"
-git push -u origin main
-```
-
-### Step 8: Maintain Security Discipline
-
-**Golden Rule: Retrieve from Pass when needed. Laziness and security are mutually exclusive.**
-
-Always follow these rules:
-
-1. **Retrieve only when needed**: `pass show <path>` immediately before use
-2. **Use immediately**: Inject directly into commands, don't store in variables
-3. **Never expose**: Don't echo, print, or log secret values
-4. **Let fall out of scope**: Secrets exist only in memory during execution
-
-**Example - Good:**
-```bash
-curl -H "Authorization: Bearer $(pass show openclaw/web/moltbook)" https://api.example.com
-```
-
-**Example - Bad:**
-```bash
-API_KEY=$(pass show openclaw/web/moltbook)
-echo "Using API key: $API_KEY"  # NEVER DO THIS
-```
+See the [example skill](https://github.com/clawdybawty/skills/blob/main/pass/SKILL.md) for a complete implementation.
 
 ---
 
@@ -192,13 +132,10 @@ Test your setup:
 # 1. Verify Pass works
 pass list
 
-# 2. Verify SSH authentication
-ssh -T git@github.com
+# 2. Check a specific secret (don't echo it!)
+pass show openclaw/web/moltbook > /dev/null && echo "Secret accessible"
 
-# 3. Verify GitHub CLI
-gh auth status
-
-# 4. Verify skill is loaded
+# 3. Verify skill is loaded
 ls ~/.openclaw/skills/pass/SKILL.md
 ```
 
@@ -217,20 +154,6 @@ ls ~/.openclaw/skills/pass/SKILL.md
 
 ## Troubleshooting
 
-### SSH Key Passphrase
-When using SSH keys with passphrases, retrieve the passphrase from Pass when needed:
-
-```bash
-# Manually add key to agent (you'll be prompted for passphrase)
-ssh-add ~/.ssh/id_ed25519
-
-# Or use the passphrase from Pass directly in commands
-# Example: git push with SSH key
-GIT_SSH_COMMAND="ssh" git push origin main
-```
-
-**Security Note:** Never create helper scripts that automatically provide passphrases. Always retrieve from Pass explicitly when needed.
-
 ### Pass Not Found
 Make sure `pass` is in your PATH:
 ```bash
@@ -243,6 +166,21 @@ Verify your GPG key is properly set up:
 gpg --list-secret-keys
 pass init <key-id>  # Re-initialize if needed
 ```
+
+### Permission Denied
+Ensure your GPG key doesn't require a passphrase for automation:
+```bash
+# Test non-interactive decryption
+echo "test" | gpg --encrypt --recipient <your-key> | gpg --decrypt
+```
+
+---
+
+## Related Documents
+
+- **GitHub CLI Setup** - How to configure `gh` with Pass (coming soon)
+- **Creating New Projects** - General guide for starting any Git project (coming soon)
+- **Pass Skill** - Full security policy and usage guidelines: https://github.com/clawdybawty/skills/blob/main/pass/SKILL.md
 
 ---
 
